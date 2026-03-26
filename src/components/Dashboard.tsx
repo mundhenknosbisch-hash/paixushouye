@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Reorder, useDragControls } from 'motion/react';
+import { Reorder, useDragControls, motion } from 'motion/react';
 import { 
   getDramaRankings, 
-  getDistributorData, getHourlyRechargeData, getHourlyActiveUserData, getActiveUserAppDistribution, getChannelData, getRealtimeMetrics,
+  getDistributorData, getHourlyRechargeData, getHourlyActiveUserData, getChannelData, getRealtimeMetrics,
   getRegionData, getAppData,
   Timezone, Currency, RealtimeMetrics, HourlyActiveUserData 
 } from '../utils/mockData';
@@ -11,7 +11,7 @@ import {
   Cell, AreaChart, Area, PieChart, Pie
 } from 'recharts';
 import { 
-  Globe, Activity, DollarSign, Users, Smartphone, Film, TrendingUp, Award, Clock, Filter, Info, CreditCard, Map, HelpCircle, X, BookOpen, Link, GripVertical
+  Globe, Activity, DollarSign, Users, Smartphone, Film, TrendingUp, Award, Clock, Filter, Info, CreditCard, Map, HelpCircle, X, BookOpen, Link, GripVertical, ListOrdered, LayoutGrid
 } from 'lucide-react';
 
 const formatCurrency = (value: number, currency: Currency) => {
@@ -26,26 +26,10 @@ const formatCurrency = (value: number, currency: Currency) => {
 const COLORS = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#f43f5e', '#14b8a6', '#84cc16', '#eab308', '#6366f1', '#d946ef'];
 
 const DashboardSection: React.FC<{ id: string, children: React.ReactNode, className?: string }> = ({ id, children, className }) => {
-  const dragControls = useDragControls();
   return (
-    <Reorder.Item 
-      value={id} 
-      dragControls={dragControls} 
-      dragListener={false}
-      className={className}
-    >
-      <div className="relative group h-full">
-        <div 
-          onPointerDown={(e) => dragControls.start(e)}
-          className="absolute top-4 right-4 z-20 p-1.5 rounded-md bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm hover:bg-slate-100 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center gap-1.5"
-          title="拖动调整位置"
-        >
-          <GripVertical className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">DRAG</span>
-        </div>
-        {children}
-      </div>
-    </Reorder.Item>
+    <motion.div layout className={className}>
+      {children}
+    </motion.div>
   );
 };
 
@@ -60,9 +44,8 @@ export default function Dashboard() {
   const [dramaTab, setDramaTab] = useState<'trending' | 'new'>('trending');
   const [dramaLanguage, setDramaLanguage] = useState<string>('ALL');
   const [channelDate, setChannelDate] = useState<'today' | 'yesterday'>('today');
-  const [appFunnelDate, setAppFunnelDate] = useState<'today' | 'yesterday'>('today');
   const [distributionDate, setDistributionDate] = useState<'today' | 'yesterday'>('today');
-  const [channelTypeFilter, setChannelTypeFilter] = useState<'all' | 'self' | 'dist'>('all');
+  const [channelTypeFilter, setChannelTypeFilter] = useState<'all' | 'self' | 'dist' | 'organic'>('all');
   const [distributorMonth, setDistributorMonth] = useState<string>('2024-03');
   const [leadRankingMonth, setLeadRankingMonth] = useState<string>('2024-03');
   const [rechargeChartType, setRechargeChartType] = useState<'cumulative' | 'hourly'>('cumulative');
@@ -82,16 +65,16 @@ export default function Dashboard() {
   });
 
   const [hiddenSections, setHiddenSections] = useState<string[]>(() => {
-    const saved = localStorage.getItem('dashboard_hidden_sections_v3');
-    return saved ? JSON.parse(saved) : ['app-funnel'];
+    const saved = localStorage.getItem('dashboard_hidden_sections_v4');
+    return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('dashboard_section_order_v3', JSON.stringify(sectionOrder));
+    localStorage.setItem('dashboard_section_order_v4', JSON.stringify(sectionOrder));
   }, [sectionOrder]);
 
   useEffect(() => {
-    localStorage.setItem('dashboard_hidden_sections_v3', JSON.stringify(hiddenSections));
+    localStorage.setItem('dashboard_hidden_sections_v4', JSON.stringify(hiddenSections));
   }, [hiddenSections]);
 
   const toggleSectionVisibility = (sectionId: string) => {
@@ -125,7 +108,6 @@ export default function Dashboard() {
     'realtime-metrics': '实时数据',
     'charts-row': '趋势图表',
     'rankings-row': '排行榜',
-    'app-funnel': '应用活跃与转化漏斗',
     'distributor-ranking': '渠道充值排行',
     'monthly-lead-ranking': '优化师组长月度排行'
   };
@@ -144,6 +126,7 @@ export default function Dashboard() {
       name: string, 
       recharge: number, 
       spend: number, 
+      expectedRevenue: number,
       roi: number, 
       count: number, 
       department: string,
@@ -158,6 +141,7 @@ export default function Dashboard() {
             name: item.leadName, 
             recharge: 0, 
             spend: 0, 
+            expectedRevenue: 0,
             roi: 0, 
             count: 0, 
             department: item.department,
@@ -167,6 +151,7 @@ export default function Dashboard() {
         }
         leads[item.leadName].recharge += item.recharge;
         leads[item.leadName].spend += item.spend || 0;
+        leads[item.leadName].expectedRevenue += item.expectedRevenue || 0;
         leads[item.leadName].count += 1;
         leads[item.leadName].promoLinkCount += item.promoLinkCount;
         leads[item.leadName].optimizerCount += item.optimizerCount;
@@ -186,7 +171,8 @@ export default function Dashboard() {
   const regionData = getRegionData(currency, distributionDate);
   const appData = getAppData(distributionDate);
   const hourlyActiveUserData = getHourlyActiveUserData();
-  const activeUserAppDistribution = getActiveUserAppDistribution(appFunnelDate);
+
+  const totalDistributionAmount = useMemo(() => regionData.reduce((sum, item) => sum + item.value, 0), [regionData]);
 
   const getComparisonLabel = (period: string) => {
     switch (period) {
@@ -229,42 +215,6 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-indigo-600" />
             <h2 className="text-lg font-bold text-slate-800">实时大盘数据</h2>
-          </div>
-          
-          <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
-
-          <div className="flex items-center gap-4">
-            {/* Client Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">客户端:</span>
-              <select
-                value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
-                className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors"
-              >
-                <option value="all">全部</option>
-                <option value="ios">iOS端</option>
-                <option value="android">安卓端</option>
-                <option value="h5">H5</option>
-                <option value="miniapp">小程序</option>
-              </select>
-            </div>
-
-            {/* Package Filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">应用:</span>
-              <select
-                value={packageFilter}
-                onChange={(e) => setPackageFilter(e.target.value)}
-                className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors"
-              >
-                <option value="all">全部</option>
-                <option value="yoo">yoo包</option>
-                <option value="manseen">manseen包</option>
-                <option value="packageA">马甲包A</option>
-                <option value="packageB">马甲包B</option>
-              </select>
-            </div>
           </div>
         </div>
         <div className="flex items-center bg-slate-100 p-1 rounded-md border border-slate-200">
@@ -650,11 +600,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Payment Method Distribution */}
+        {/* Recharge Details */}
         <div>
           <div className="flex items-center gap-2 mb-6">
             <CreditCard className="w-4 h-4 text-slate-500" />
-            <h4 className="text-sm font-semibold text-slate-700">支付方式分布</h4>
+            <h4 className="text-sm font-semibold text-slate-700">充值明细</h4>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -674,8 +624,30 @@ export default function Dashboard() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => [`${value}%`, '占比']}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      const percent = data.value;
+                      const amount = (percent / 100) * totalDistributionAmount;
+                      return (
+                        <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-100">
+                          <p className="text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }}></span>
+                            {data.name}
+                          </p>
+                          <div className="flex justify-between gap-4 text-xs text-slate-500 mb-1">
+                            <span>占比:</span>
+                            <span className="font-medium text-slate-700">{percent}%</span>
+                          </div>
+                          <div className="flex justify-between gap-4 text-xs text-slate-500">
+                            <span>金额:</span>
+                            <span className="font-medium text-slate-700">{formatCurrency(amount, currency)}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
                 />
                 <Legend 
                   verticalAlign="bottom" 
@@ -687,117 +659,6 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
-    </div>
-  );
-
-  const renderAppFunnel = () => (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-        <div className="flex items-center gap-2">
-          <Smartphone className="w-5 h-5 text-indigo-500" />
-          <h3 className="font-bold text-slate-800">应用活跃与转化漏斗</h3>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
-            <button
-              onClick={() => setAppFunnelDate('today')}
-              className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${appFunnelDate === 'today' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              今日
-            </button>
-            <button
-              onClick={() => setAppFunnelDate('yesterday')}
-              className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${appFunnelDate === 'yesterday' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              昨日
-            </button>
-          </div>
-          <div className="text-[10px] text-slate-400 font-medium">按活跃人数排行</div>
-        </div>
-      </div>
-      <div className="overflow-auto max-h-[670px]">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50/50 text-slate-500 font-medium text-[11px] uppercase tracking-wider border-b border-slate-100">
-            <tr>
-              <th className="px-6 py-3">应用名称</th>
-              <th className="px-6 py-3">活跃用户 (DAU)</th>
-              <th className="px-6 py-3">观看人数 (Viewing)</th>
-              <th className="px-6 py-3">意向转化 (拉起)</th>
-              <th className="px-6 py-3">充值转化 (成功)</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {activeUserAppDistribution.map((app) => {
-              const viewingRate = ((app.viewingUsers / app.activeUsers) * 100).toFixed(1);
-              const intentRate = ((app.intentUsers / app.viewingUsers) * 100).toFixed(1);
-              const rechargeRate = ((app.rechargeUsers / app.intentUsers) * 100).toFixed(1);
-              
-              return (
-                <tr key={app.name} className="hover:bg-slate-50/80 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{app.name}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono font-bold text-slate-800">{app.activeUsers.toLocaleString()}</span>
-                      </div>
-                      <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-indigo-500 rounded-full" 
-                          style={{ width: `${(app.activeUsers / activeUserAppDistribution[0].activeUsers) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono font-bold text-indigo-400">{app.viewingUsers.toLocaleString()}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{viewingRate}%</span>
-                      </div>
-                      <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-indigo-300 rounded-full" 
-                          style={{ width: `${viewingRate}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono font-bold text-amber-600">{app.intentUsers.toLocaleString()}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{intentRate}%</span>
-                      </div>
-                      <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-amber-400 rounded-full" 
-                          style={{ width: `${intentRate}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono font-bold text-emerald-600">{app.rechargeUsers.toLocaleString()}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{rechargeRate}%</span>
-                      </div>
-                      <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-emerald-500 rounded-full" 
-                          style={{ width: `${rechargeRate}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
     </div>
   );
@@ -815,7 +676,8 @@ export default function Dashboard() {
             {[
               { value: 'all', label: '全部' },
               { value: 'self', label: '自投' },
-              { value: 'dist', label: '分销' }
+              { value: 'dist', label: '分销' },
+              { value: 'organic', label: '自然渠道' }
             ].map(opt => (
               <button
                 key={opt.value}
@@ -849,7 +711,7 @@ export default function Dashboard() {
             <tr>
               <th className="px-4 py-3 whitespace-nowrap">渠道ID</th>
               <th className="px-4 py-3 whitespace-nowrap">优化师信息</th>
-              <th className="px-4 py-3 whitespace-nowrap">平台</th>
+              <th className="px-4 py-3 whitespace-nowrap">推广媒体</th>
               <th className="px-4 py-3 whitespace-nowrap">类型</th>
               <th className="px-4 py-3 whitespace-nowrap">剧名/ID/语言</th>
               <th className="px-4 py-3 whitespace-nowrap text-right">充值金额/人数</th>
@@ -870,15 +732,22 @@ export default function Dashboard() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${item.platform === 'fb' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    item.platform === 'fb' ? 'bg-blue-100 text-blue-700' : 
+                    item.platform === 'tk' ? 'bg-pink-100 text-pink-700' :
+                    item.platform === 'ios' ? 'bg-slate-100 text-slate-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
                     {item.platform}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   {item.type === 'self' ? (
                     <span className="inline-flex items-center px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold border border-indigo-100 uppercase tracking-wider">自投</span>
-                  ) : (
+                  ) : item.type === 'dist' ? (
                     <span className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold border border-emerald-100 uppercase tracking-wider">分销</span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-bold border border-amber-100 uppercase tracking-wider">自然</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -999,6 +868,7 @@ export default function Dashboard() {
               <th className="px-4 py-3 whitespace-nowrap">组长姓名</th>
               <th className="px-4 py-3 whitespace-nowrap">部门</th>
               <th className="px-4 py-3 whitespace-nowrap text-right">充值金额</th>
+              <th className="px-4 py-3 whitespace-nowrap text-right">预计实收</th>
               <th className="px-4 py-3 whitespace-nowrap text-right">消耗</th>
               <th className="px-4 py-3 whitespace-nowrap text-right text-indigo-600">推广链数量</th>
               <th className="px-4 py-3 whitespace-nowrap text-right text-indigo-600">投手数量</th>
@@ -1021,6 +891,7 @@ export default function Dashboard() {
                 <td className="px-4 py-3 font-bold text-slate-800">{lead.name}</td>
                 <td className="px-4 py-3 text-slate-500">{lead.department}</td>
                 <td className="px-4 py-3 text-right font-mono text-blue-600 font-medium">{formatCurrency(lead.recharge, currency)}</td>
+                <td className="px-4 py-3 text-right font-mono text-emerald-600 font-medium">{formatCurrency(lead.expectedRevenue, currency)}</td>
                 <td className="px-4 py-3 text-right font-mono text-amber-600">{formatCurrency(lead.spend, currency)}</td>
                 <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600">{lead.promoLinkCount}</td>
                 <td className="px-4 py-3 text-right font-mono font-bold text-indigo-600">{lead.optimizerCount}</td>
@@ -1050,42 +921,6 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-indigo-600" />
                 <h2 className="text-lg font-bold text-slate-800">实时大盘数据</h2>
-              </div>
-              
-              <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
-
-              <div className="flex items-center gap-4">
-                {/* Client Filter */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">客户端:</span>
-                  <select
-                    value={clientFilter}
-                    onChange={(e) => setClientFilter(e.target.value)}
-                    className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors"
-                  >
-                    <option value="all">全部</option>
-                    <option value="ios">iOS端</option>
-                    <option value="android">安卓端</option>
-                    <option value="h5">H5</option>
-                    <option value="miniapp">小程序</option>
-                  </select>
-                </div>
-
-                {/* Package Filter */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">应用:</span>
-                  <select
-                    value={packageFilter}
-                    onChange={(e) => setPackageFilter(e.target.value)}
-                    className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors"
-                  >
-                    <option value="all">全部</option>
-                    <option value="yoo">yoo包</option>
-                    <option value="manseen">manseen包</option>
-                    <option value="packageA">马甲包A</option>
-                    <option value="packageB">马甲包B</option>
-                  </select>
-                </div>
               </div>
             </div>
             <div className="flex items-center bg-slate-100 p-1 rounded-md border border-slate-200">
@@ -1361,11 +1196,11 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Payment Method Distribution */}
+                {/* Recharge Details */}
                 <div>
                   <div className="flex items-center gap-2 mb-6">
                     <CreditCard className="w-4 h-4 text-slate-500" />
-                    <h4 className="text-sm font-semibold text-slate-700">支付方式分布</h4>
+                    <h4 className="text-sm font-semibold text-slate-700">充值明细</h4>
                   </div>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -1385,8 +1220,30 @@ export default function Dashboard() {
                           ))}
                         </Pie>
                         <Tooltip 
-                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                          formatter={(value: number) => [`${value}%`, '占比']}
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              const percent = data.value;
+                              const amount = (percent / 100) * totalDistributionAmount;
+                              return (
+                                <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-100">
+                                  <p className="text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }}></span>
+                                    {data.name}
+                                  </p>
+                                  <div className="flex justify-between gap-4 text-xs text-slate-500 mb-1">
+                                    <span>占比:</span>
+                                    <span className="font-medium text-slate-700">{percent}%</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4 text-xs text-slate-500">
+                                    <span>金额:</span>
+                                    <span className="font-medium text-slate-700">{formatCurrency(amount, currency)}</span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
                         />
                         <Legend 
                           verticalAlign="bottom" 
@@ -1531,7 +1388,8 @@ export default function Dashboard() {
                 {[
                   { value: 'all', label: '全部' },
                   { value: 'self', label: '自投' },
-                  { value: 'dist', label: '分销' }
+                  { value: 'dist', label: '分销' },
+                  { value: 'organic', label: '自然渠道' }
                 ].map(opt => (
                   <button
                     key={opt.value}
@@ -1566,7 +1424,7 @@ export default function Dashboard() {
                 <tr>
                   <th className="px-4 py-3 whitespace-nowrap">渠道ID</th>
                   <th className="px-4 py-3 whitespace-nowrap">优化师信息</th>
-                  <th className="px-4 py-3 whitespace-nowrap">平台</th>
+                  <th className="px-4 py-3 whitespace-nowrap">推广媒体</th>
                   <th className="px-4 py-3 whitespace-nowrap">类型</th>
                   <th className="px-4 py-3 whitespace-nowrap">剧名/ID/语言</th>
                   <th className="px-4 py-3 whitespace-nowrap text-right">充值金额/人数</th>
@@ -1587,15 +1445,22 @@ export default function Dashboard() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${item.platform === 'fb' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        item.platform === 'fb' ? 'bg-blue-100 text-blue-700' : 
+                        item.platform === 'tk' ? 'bg-pink-100 text-pink-700' :
+                        item.platform === 'ios' ? 'bg-slate-100 text-slate-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
                         {item.platform}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {item.type === 'self' ? (
                         <span className="inline-flex items-center px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold border border-indigo-100 uppercase tracking-wider">自投</span>
-                      ) : (
+                      ) : item.type === 'dist' ? (
                         <span className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold border border-emerald-100 uppercase tracking-wider">分销</span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px] font-bold border border-amber-100 uppercase tracking-wider">自然</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -1631,120 +1496,6 @@ export default function Dashboard() {
         </div>
             </div>
           </div>
-        );
-      case 'app-funnel':
-        return (
-          <>
-            {/* Active User & Conversion Funnel List (New Row) */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center gap-2">
-              <Smartphone className="w-5 h-5 text-indigo-500" />
-              <h3 className="font-bold text-slate-800">应用活跃与转化漏斗</h3>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
-                <button
-                  onClick={() => setAppFunnelDate('today')}
-                  className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${appFunnelDate === 'today' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  今日
-                </button>
-                <button
-                  onClick={() => setAppFunnelDate('yesterday')}
-                  className={`px-3 py-1 text-[10px] font-medium rounded-md transition-all ${appFunnelDate === 'yesterday' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  昨日
-                </button>
-              </div>
-              <div className="text-[10px] text-slate-400 font-medium">按活跃人数排行</div>
-            </div>
-          </div>
-          <div className="overflow-auto max-h-[670px]">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/50 text-slate-500 font-medium text-[11px] uppercase tracking-wider border-b border-slate-100">
-                <tr>
-                  <th className="px-6 py-3">应用名称</th>
-                  <th className="px-6 py-3">活跃用户 (DAU)</th>
-                  <th className="px-6 py-3">观看人数 (Viewing)</th>
-                  <th className="px-6 py-3">意向转化 (拉起)</th>
-                  <th className="px-6 py-3">充值转化 (成功)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {activeUserAppDistribution.map((app) => {
-                  const viewingRate = ((app.viewingUsers / app.activeUsers) * 100).toFixed(1);
-                  const intentRate = ((app.intentUsers / app.viewingUsers) * 100).toFixed(1);
-                  const rechargeRate = ((app.rechargeUsers / app.intentUsers) * 100).toFixed(1);
-                  
-                  return (
-                    <tr key={app.name} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{app.name}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-mono font-bold text-slate-800">{app.activeUsers.toLocaleString()}</span>
-                          </div>
-                          <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-indigo-500 rounded-full" 
-                              style={{ width: `${(app.activeUsers / activeUserAppDistribution[0].activeUsers) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-mono font-bold text-indigo-400">{app.viewingUsers.toLocaleString()}</span>
-                            <span className="text-[10px] text-slate-400 font-medium">{viewingRate}%</span>
-                          </div>
-                          <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-indigo-300 rounded-full" 
-                              style={{ width: `${viewingRate}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-mono font-bold text-amber-600">{app.intentUsers.toLocaleString()}</span>
-                            <span className="text-[10px] text-slate-400 font-medium">{intentRate}%</span>
-                          </div>
-                          <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-amber-400 rounded-full" 
-                              style={{ width: `${intentRate}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-mono font-bold text-emerald-600">{app.rechargeUsers.toLocaleString()}</span>
-                            <span className="text-[10px] text-slate-400 font-medium">{rechargeRate}%</span>
-                          </div>
-                          <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-emerald-500 rounded-full" 
-                              style={{ width: `${rechargeRate}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-          </>
         );
       case 'distributor-ranking':
         return renderDistributorRanking();
@@ -1822,14 +1573,54 @@ export default function Dashboard() {
 
             <div className="h-8 w-px bg-slate-200 mx-2"></div>
 
-            {/* Section Visibility Dropdown */}
+            {/* Client Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">客户端:</span>
+              <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200 transition-colors hover:bg-slate-200">
+                <Smartphone className="w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={clientFilter}
+                  onChange={(e) => setClientFilter(e.target.value)}
+                  className="bg-transparent text-xs font-medium focus:outline-none cursor-pointer text-slate-700"
+                >
+                  <option value="all">全部</option>
+                  <option value="ios">iOS端</option>
+                  <option value="android">安卓端</option>
+                  <option value="h5">H5</option>
+                  <option value="miniapp">小程序</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Package Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">应用:</span>
+              <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200 transition-colors hover:bg-slate-200">
+                <LayoutGrid className="w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={packageFilter}
+                  onChange={(e) => setPackageFilter(e.target.value)}
+                  className="bg-transparent text-xs font-medium focus:outline-none cursor-pointer text-slate-700"
+                >
+                  <option value="all">全部</option>
+                  <option value="yoo">yoo</option>
+                  <option value="manseen">manseen</option>
+                  <option value="majiaA">马甲包A</option>
+                  <option value="majiaB">马甲包B</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="h-8 w-px bg-slate-200 mx-2"></div>
+
+            {/* Section Visibility & Sort Dropdown */}
             <div className="relative">
               <button 
                 onClick={() => setIsVisibilityMenuOpen(!isVisibilityMenuOpen)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors ${isVisibilityMenuOpen ? 'bg-slate-50 border-slate-300 text-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
               >
                 <Filter className="w-4 h-4" />
-                <span className="text-xs font-bold">模块显示</span>
+                <span className="text-xs font-bold">模块显示与排序</span>
               </button>
               
               {isVisibilityMenuOpen && (
@@ -1838,18 +1629,33 @@ export default function Dashboard() {
                     className="fixed inset-0 z-40"
                     onClick={() => setIsVisibilityMenuOpen(false)}
                   />
-                  <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
-                    {Object.entries(sectionNames).map(([id, name]) => (
-                      <label key={id} className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={!hiddenSections.includes(id)}
-                          onChange={() => toggleSectionVisibility(id)}
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="text-sm text-slate-700">{name}</span>
-                      </label>
-                    ))}
+                  <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
+                    <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-100 mb-2">
+                      拖动调整顺序，勾选控制显示
+                    </div>
+                    <Reorder.Group 
+                      axis="y" 
+                      values={sectionOrder} 
+                      onReorder={setSectionOrder}
+                      className="flex flex-col"
+                    >
+                      {sectionOrder.map((id) => (
+                        <Reorder.Item 
+                          key={id} 
+                          value={id}
+                          className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 cursor-grab active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-4 h-4 text-slate-400" />
+                          <input 
+                            type="checkbox" 
+                            checked={!hiddenSections.includes(id)}
+                            onChange={() => toggleSectionVisibility(id)}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <span className="text-sm text-slate-700 select-none">{sectionNames[id]}</span>
+                        </Reorder.Item>
+                      ))}
+                    </Reorder.Group>
                   </div>
                 </>
               )}
@@ -1868,18 +1674,13 @@ export default function Dashboard() {
       </div>
 
       <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Reorder.Group 
-          axis="y" 
-          values={sectionOrder} 
-          onReorder={setSectionOrder} 
-          className="space-y-6"
-        >
+        <div className="space-y-6">
           {sectionOrder.map((sectionId) => (
             <DashboardSection key={sectionId} id={sectionId}>
               {renderSection(sectionId)}
             </DashboardSection>
           ))}
-        </Reorder.Group>
+        </div>
       </main>
 
       {/* PRD Documentation Modal */}

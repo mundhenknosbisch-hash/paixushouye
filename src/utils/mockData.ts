@@ -41,8 +41,8 @@ export interface ChannelData {
   id: string; // Channel ID
   name: string; // Optimizer (优化师)
   leadName: string; // Optimizer Lead (优化师组长)
-  platform: 'fb' | 'tk';
-  type: 'self' | 'dist';
+  platform: 'fb' | 'tk' | 'ios' | 'android';
+  type: 'self' | 'dist' | 'organic';
   recharge: number;
   rechargeUsers: number;
   newRecharge: number;
@@ -230,10 +230,10 @@ export const getAppData = (date: 'today' | 'yesterday' = 'today') => {
       { name: '马甲包B', value: 8 },
     ],
     payments: [
-      { name: 'Apple Pay', value: Math.round(40 * m) },
-      { name: 'Google Pay', value: Math.round(30 * m) },
-      { name: 'Credit Card', value: Math.round(20 * m) },
-      { name: 'PayPal', value: Math.round(10 * m) },
+      { name: '200金币', value: Math.round(40 * m) },
+      { name: '周会员', value: Math.round(30 * m) },
+      { name: '月会员（续订）', value: Math.round(20 * m) },
+      { name: '年会员', value: Math.round(10 * m) },
     ]
   };
 };
@@ -496,6 +496,24 @@ export const getChannelData = (currency: Currency, date: 'today' | 'yesterday' |
       promoLinkCount: 31, optimizerCount: 3,
       dramaName: 'El Amor del CEO', dramaId: '1003', language: '西班牙语',
       department: '分销--分销公司1'
+    },
+    { 
+      id: 'CH011', name: '自然流量-App Store', leadName: '-', platform: 'ios', type: 'organic', 
+      recharge: 45000 * rate * m, rechargeUsers: 300, 
+      newRecharge: 10000 * rate * m, newRechargeUsers: 80,
+      netRevenue: 45000 * rate * m, activeUsers: Math.floor(5000 * m),
+      promoLinkCount: 0, optimizerCount: 0,
+      dramaName: 'Billionaire\'s Secret Wife', dramaId: '1001', language: '英语',
+      department: '自然流量'
+    },
+    { 
+      id: 'CH012', name: '自然流量-Google Play', leadName: '-', platform: 'android', type: 'organic', 
+      recharge: 35000 * rate * m, rechargeUsers: 250, 
+      newRecharge: 8000 * rate * m, newRechargeUsers: 60,
+      netRevenue: 35000 * rate * m, activeUsers: Math.floor(4000 * m),
+      promoLinkCount: 0, optimizerCount: 0,
+      dramaName: 'Alpha\'s Rejected Mate', dramaId: '1002', language: '英语',
+      department: '自然流量'
     },
   ];
 
