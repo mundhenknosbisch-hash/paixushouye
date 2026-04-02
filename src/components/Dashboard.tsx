@@ -88,6 +88,50 @@ export default function Dashboard() {
   const [filterLevel2, setFilterLevel2] = useState<string>('all');
   const [filterLevel3, setFilterLevel3] = useState<string>('all');
   const [filterLevel4, setFilterLevel4] = useState<string>('all');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+
+  const handleDepartmentChange = (val: string) => {
+    setDepartmentFilter(val);
+    if (val === 'all') {
+      setFilterLevel1('all');
+      setFilterLevel2('all');
+      setFilterLevel3('all');
+      setFilterLevel4('all');
+    } else {
+      const parts = val.split(':');
+      setFilterLevel1(parts[1] || 'all');
+      setFilterLevel2(parts[2] || 'all');
+      setFilterLevel3(parts[3] || 'all');
+      setFilterLevel4(parts[4] || 'all');
+    }
+  };
+
+  const departmentOptions = React.useMemo(() => {
+    const options = [{ label: '全部', value: 'all' }];
+    Object.entries(DEPARTMENTS_HIERARCHY).forEach(([l1, l2Obj]) => {
+      options.push({ label: l1, value: `l1:${l1}` });
+      Object.entries(l2Obj).forEach(([l2, l3Obj]) => {
+        options.push({ label: `\u00A0\u00A0${l2}`, value: `l2:${l1}:${l2}` });
+        Object.entries(l3Obj).forEach(([l3, l4Arr]) => {
+          options.push({ label: `\u00A0\u00A0\u00A0\u00A0${l3}`, value: `l3:${l1}:${l2}:${l3}` });
+          l4Arr.forEach(l4 => {
+            options.push({ label: `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${l4}`, value: `l4:${l1}:${l2}:${l3}:${l4}` });
+          });
+        });
+      });
+    });
+
+    if (currentUser.role === 'admin') {
+      return options;
+    } else if (currentUser.role === 'team_leader') {
+      const prefix = `l3:总公司:${currentUser.level2}:${currentUser.level3}`;
+      const l4Prefix = `l4:总公司:${currentUser.level2}:${currentUser.level3}`;
+      return options.filter(opt => opt.value === 'all' || opt.value === prefix || opt.value.startsWith(l4Prefix));
+    } else {
+      const myValue = `l4:总公司:${currentUser.level2}:${currentUser.level3}:${currentUser.actualName}`;
+      return options.filter(opt => opt.value === 'all' || opt.value === myValue);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser.role === 'admin') {
@@ -95,16 +139,19 @@ export default function Dashboard() {
       setFilterLevel2('all');
       setFilterLevel3('all');
       setFilterLevel4('all');
+      setDepartmentFilter('all');
     } else if (currentUser.role === 'team_leader') {
       setFilterLevel1('总公司');
       setFilterLevel2(currentUser.level2 || 'all');
       setFilterLevel3(currentUser.level3 || 'all');
       setFilterLevel4('all');
+      setDepartmentFilter(`l3:总公司:${currentUser.level2}:${currentUser.level3}`);
     } else if (currentUser.role === 'media_buyer') {
       setFilterLevel1('总公司');
       setFilterLevel2(currentUser.level2 || 'all');
       setFilterLevel3(currentUser.level3 || 'all');
       setFilterLevel4(currentUser.actualName || 'all');
+      setDepartmentFilter(`l4:总公司:${currentUser.level2}:${currentUser.level3}:${currentUser.actualName}`);
     }
   }, [currentUser]);
 
@@ -448,7 +495,7 @@ export default function Dashboard() {
       <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
         <div className="flex items-center gap-2">
           <Film className="w-5 h-5 text-rose-500" />
-          <h3 className="font-bold text-slate-800">实时短剧排行</h3>
+          <h3 className="font-bold text-slate-800">短剧排行</h3>
         </div>
         <div className="flex bg-slate-200/70 p-1 rounded-lg">
           <button 
@@ -919,41 +966,41 @@ export default function Dashboard() {
                   {/* 1. 消耗 */}
                   <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                     <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">消耗</div>
-                    <div className="text-xl font-bold font-mono text-slate-800 truncate mb-1 tabular-nums">{formatCurrency(totalSpend, currency)}</div>
+                    <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalSpend, currency)}</div>
                   </div>
                   {/* 2. D0充值 */}
                   <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                     <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">D0充值</div>
-                    <div className="text-xl font-bold font-mono text-slate-800 truncate mb-1 tabular-nums">{formatCurrency(totalD0Recharge, currency)}</div>
+                    <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalD0Recharge, currency)}</div>
                   </div>
                   {/* NEW: D0 ROI */}
                   {(currentUser.role === 'admin' || isSelfAdMode) && (
                     <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                       <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">D0 ROI</div>
-                      <div className="text-xl font-bold font-mono text-slate-800 truncate mb-1 tabular-nums">{totalD0Roi.toFixed(2)}</div>
+                      <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{totalD0Roi.toFixed(2)}</div>
                     </div>
                   )}
                   {/* 3. D0预计实收 */}
                   <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                     <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">D0预计实收</div>
-                    <div className="text-xl font-bold font-mono text-slate-800 truncate mb-1 tabular-nums">{formatCurrency(totalD0NetRevenue, currency)}</div>
+                    <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalD0NetRevenue, currency)}</div>
                   </div>
                   {/* 4. 充值金额 */}
                   <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                     <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">充值金额</div>
-                    <div className="text-xl font-bold font-mono text-slate-800 truncate mb-1 tabular-nums">{formatCurrency(totalRecharge, currency)}</div>
+                    <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalRecharge, currency)}</div>
                   </div>
                   {/* NEW: ROI */}
                   {(currentUser.role === 'admin' || isSelfAdMode) && (
                     <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                       <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">ROI</div>
-                      <div className="text-xl font-bold font-mono text-slate-800 truncate mb-1 tabular-nums">{totalRoi.toFixed(2)}</div>
+                      <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{totalRoi.toFixed(2)}</div>
                     </div>
                   )}
                   {/* 5. 预计实收 */}
                   <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                     <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">预计实收</div>
-                    <div className="text-xl font-bold font-mono text-slate-800 truncate mb-1 tabular-nums">{formatCurrency(totalNetRevenue, currency)}</div>
+                    <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalNetRevenue, currency)}</div>
                   </div>
                 </div>
                 
@@ -1217,7 +1264,7 @@ export default function Dashboard() {
               <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
                 <div className="flex items-center gap-2">
                   <Film className="w-5 h-5 text-rose-500" />
-                  <h3 className="font-bold text-slate-800">实时短剧排行</h3>
+                  <h3 className="font-bold text-slate-800">短剧排行</h3>
                 </div>
                 {/* Language Filter */}
                 <div className="flex items-center gap-2">
@@ -1298,14 +1345,17 @@ export default function Dashboard() {
                                     <span className="text-slate-400">支付</span>
                                     <span className="text-slate-700 font-bold tabular-nums">{drama.payingUsers.toLocaleString()}</span>
                                   </div>
-                                  <div className="flex flex-col col-span-3 mt-1 pt-1 border-t border-slate-50/50">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-indigo-600 font-medium">总充值</span>
-                                      <span className="text-indigo-600 font-bold tabular-nums">{formatCurrency(drama.revenue, currency)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-emerald-600 font-medium">人均</span>
-                                      <span className="text-emerald-600 font-bold tabular-nums">{formatCurrency(drama.arpu, currency)}</span>
+                                  <div className="col-span-3 mt-2">
+                                    <div className="flex items-center justify-between bg-slate-50/80 border border-slate-100 rounded-md px-2 py-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-slate-500 font-medium">总充值</span>
+                                        <span className="text-indigo-600 font-bold tabular-nums">{formatCurrency(drama.revenue, currency)}</span>
+                                      </div>
+                                      <div className="w-px h-3 bg-slate-200"></div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-slate-500 font-medium">人均</span>
+                                        <span className="text-emerald-600 font-bold tabular-nums">{formatCurrency(drama.arpu, currency)}</span>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -1342,7 +1392,81 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold tracking-tight text-slate-800">出海短剧运营大盘</h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm border border-indigo-200">
+            {/* Current User Role Display (Demo) */}
+            <div className="flex items-center gap-2 shrink-0 mr-2">
+              <span className="text-xs text-slate-500">当前用户(演示):</span>
+              <select
+                value={currentUser.name}
+                onChange={(e) => {
+                  const user = USERS.find(u => u.name === e.target.value);
+                  if (user) setCurrentUser(user);
+                }}
+                className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors"
+              >
+                {USERS.map(user => (
+                  <option key={user.name} value={user.name}>{user.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Section Visibility & Sort Dropdown (Demo) */}
+            <div className="relative shrink-0">
+              <button 
+                onClick={() => setIsVisibilityMenuOpen(!isVisibilityMenuOpen)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors ${isVisibilityMenuOpen ? 'bg-slate-50 border-slate-300 text-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+              >
+                <Filter className="w-4 h-4" />
+                <span className="text-xs font-bold">模块显示与排序</span>
+              </button>
+              
+              {isVisibilityMenuOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsVisibilityMenuOpen(false)}
+                  />
+                  <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
+                    <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-100 mb-2">
+                      拖动调整顺序，勾选控制显示
+                    </div>
+                    <Reorder.Group 
+                      axis="y" 
+                      values={sectionOrder} 
+                      onReorder={setSectionOrder}
+                      className="flex flex-col"
+                    >
+                      {sectionOrder.map((id) => (
+                        <Reorder.Item 
+                          key={id} 
+                          value={id}
+                          className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 cursor-grab active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-4 h-4 text-slate-400" />
+                          <input 
+                            type="checkbox" 
+                            checked={!hiddenSections.includes(id)}
+                            onChange={() => toggleSectionVisibility(id)}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <span className="text-sm text-slate-700 select-none">{sectionNames[id]}</span>
+                        </Reorder.Item>
+                      ))}
+                    </Reorder.Group>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* PRD Button (Demo) */}
+            <button 
+              onClick={() => setIsPrdOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-md border border-indigo-100 hover:bg-indigo-100 transition-colors shrink-0"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span className="text-xs font-bold">数据说明 (PRD)</span>
+            </button>
+
+            <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm border border-indigo-200 ml-2">
               AD
             </div>
           </div>
@@ -1432,173 +1556,26 @@ export default function Dashboard() {
                 </select>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-4 shrink-0 ml-4">
-            <div className="h-8 w-px bg-slate-200 shrink-0 hidden sm:block"></div>
+            <div className="h-8 w-px bg-slate-200 mx-2 shrink-0"></div>
 
-            {/* Section Visibility & Sort Dropdown */}
-            <div className="relative shrink-0">
-              <button 
-                onClick={() => setIsVisibilityMenuOpen(!isVisibilityMenuOpen)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors ${isVisibilityMenuOpen ? 'bg-slate-50 border-slate-300 text-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-              >
-                <Filter className="w-4 h-4" />
-                <span className="text-xs font-bold">模块显示与排序</span>
-              </button>
-              
-              {isVisibilityMenuOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsVisibilityMenuOpen(false)}
-                  />
-                  <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
-                    <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-100 mb-2">
-                      拖动调整顺序，勾选控制显示
-                    </div>
-                    <Reorder.Group 
-                      axis="y" 
-                      values={sectionOrder} 
-                      onReorder={setSectionOrder}
-                      className="flex flex-col"
-                    >
-                      {sectionOrder.map((id) => (
-                        <Reorder.Item 
-                          key={id} 
-                          value={id}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 cursor-grab active:cursor-grabbing"
-                        >
-                          <GripVertical className="w-4 h-4 text-slate-400" />
-                          <input 
-                            type="checkbox" 
-                            checked={!hiddenSections.includes(id)}
-                            onChange={() => toggleSectionVisibility(id)}
-                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                          />
-                          <span className="text-sm text-slate-700 select-none">{sectionNames[id]}</span>
-                        </Reorder.Item>
-                      ))}
-                    </Reorder.Group>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* PRD Button */}
-            <button 
-              onClick={() => setIsPrdOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-md border border-indigo-100 hover:bg-indigo-100 transition-colors shrink-0"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span className="text-xs font-bold">数据说明 (PRD)</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Department Filter Row */}
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center w-full border-t border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-4 shrink-0 overflow-x-auto">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-600 shrink-0">
-              <Users className="w-4 h-4" />
-              <span>部门筛选:</span>
-            </div>
-
-            {/* Level 1 */}
+            {/* Department Filter (Consolidated) */}
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500">一级:</span>
-              <select
-                value={filterLevel1}
-                onChange={(e) => {
-                  setFilterLevel1(e.target.value);
-                  setFilterLevel2('all');
-                  setFilterLevel3('all');
-                  setFilterLevel4('all');
-                }}
-                disabled={currentUser.role !== 'admin'}
-                className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
-              >
-                <option value="all">全部</option>
-                {Object.keys(DEPARTMENTS_HIERARCHY).map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
+              <span className="text-xs text-slate-500">部门:</span>
+              <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-200 transition-colors hover:bg-slate-200">
+                <Users className="w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={departmentFilter}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  disabled={currentUser.role === 'media_buyer'}
+                  className="bg-transparent text-xs font-medium focus:outline-none cursor-pointer text-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed max-w-[180px] truncate"
+                >
+                  {departmentOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-
-            {/* Level 2 */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500">二级:</span>
-              <select
-                value={filterLevel2}
-                onChange={(e) => {
-                  setFilterLevel2(e.target.value);
-                  setFilterLevel3('all');
-                  setFilterLevel4('all');
-                }}
-                disabled={currentUser.role !== 'admin' || filterLevel1 === 'all'}
-                className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
-              >
-                <option value="all">全部</option>
-                {filterLevel1 !== 'all' && Object.keys(DEPARTMENTS_HIERARCHY[filterLevel1] || {}).map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Level 3 */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500">三级:</span>
-              <select
-                value={filterLevel3}
-                onChange={(e) => {
-                  setFilterLevel3(e.target.value);
-                  setFilterLevel4('all');
-                }}
-                disabled={currentUser.role !== 'admin' || filterLevel2 === 'all'}
-                className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
-              >
-                <option value="all">全部</option>
-                {filterLevel1 !== 'all' && filterLevel2 !== 'all' && Object.keys(DEPARTMENTS_HIERARCHY[filterLevel1]?.[filterLevel2] || {}).map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Level 4 */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500">四级:</span>
-              <select
-                value={filterLevel4}
-                onChange={(e) => setFilterLevel4(e.target.value)}
-                disabled={currentUser.role === 'media_buyer' || filterLevel3 === 'all'}
-                className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
-              >
-                <option value="all">全部</option>
-                {filterLevel1 !== 'all' && filterLevel2 !== 'all' && filterLevel3 !== 'all' && (DEPARTMENTS_HIERARCHY[filterLevel1]?.[filterLevel2]?.[filterLevel3] || []).map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="h-6 w-px bg-slate-200 mx-2 shrink-0"></div>
-
-            {/* Current User Role Display */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500">当前用户:</span>
-              <select
-                value={currentUser.name}
-                onChange={(e) => {
-                  const user = USERS.find(u => u.name === e.target.value);
-                  if (user) setCurrentUser(user);
-                }}
-                className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded px-2 py-1 focus:outline-none cursor-pointer hover:border-indigo-300 transition-colors"
-              >
-                {USERS.map(user => (
-                  <option key={user.name} value={user.name}>{user.name}</option>
-                ))}
-              </select>
-            </div>
-
           </div>
         </div>
       </div>
