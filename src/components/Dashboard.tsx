@@ -927,6 +927,10 @@ export default function Dashboard() {
         const totalNetRevenue = adDataScaled.distNetRevenue + adDataScaled.selfNetRevenue;
         const totalD0Roi = totalSpend > 0 ? +(adDataScaled.selfD0Recharge / totalSpend).toFixed(2) : 0;
         const totalRoi = totalSpend > 0 ? +(adDataScaled.selfRecharge / totalSpend).toFixed(2) : 0;
+        const isMediaBuyer = currentUser.role === 'media_buyer';
+        const gridColsClass = isMediaBuyer 
+          ? 'xl:grid-cols-4' 
+          : (currentUser.role === 'admin' || isSelfAdMode ? 'xl:grid-cols-7' : 'xl:grid-cols-5');
 
         return (
           <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -962,7 +966,7 @@ export default function Dashboard() {
             
             <div className="p-6">
               <div className="space-y-4">
-                <div className={`grid grid-cols-2 md:grid-cols-3 ${currentUser.role === 'admin' || isSelfAdMode ? 'xl:grid-cols-7' : 'xl:grid-cols-5'} gap-4`}>
+                <div className={`grid grid-cols-2 md:grid-cols-3 ${gridColsClass} gap-4`}>
                   {/* 1. 消耗 */}
                   <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                     <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">消耗</div>
@@ -974,10 +978,12 @@ export default function Dashboard() {
                     <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalD0Recharge, currency)}</div>
                   </div>
                   {/* NEW: D0 ROI */}
-                  {(currentUser.role === 'admin' || isSelfAdMode) && (
+                  {(isMediaBuyer || currentUser.role === 'admin' || isSelfAdMode) && (
                     <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                       <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">D0 ROI</div>
-                      <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{totalD0Roi.toFixed(2)}</div>
+                      <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">
+                        {(!isSelfAdMode && currentUser.level2 === '分销') ? '-' : totalD0Roi.toFixed(2)}
+                      </div>
                     </div>
                   )}
                   {/* 3. D0预计实收 */}
@@ -986,22 +992,26 @@ export default function Dashboard() {
                     <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalD0NetRevenue, currency)}</div>
                   </div>
                   {/* 4. 充值金额 */}
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
-                    <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">充值金额</div>
-                    <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalRecharge, currency)}</div>
-                  </div>
+                  {!isMediaBuyer && (
+                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
+                      <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">充值金额</div>
+                      <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalRecharge, currency)}</div>
+                    </div>
+                  )}
                   {/* NEW: ROI */}
-                  {(currentUser.role === 'admin' || isSelfAdMode) && (
+                  {!isMediaBuyer && (currentUser.role === 'admin' || isSelfAdMode) && (
                     <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
                       <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">ROI</div>
                       <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{totalRoi.toFixed(2)}</div>
                     </div>
                   )}
                   {/* 5. 预计实收 */}
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
-                    <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">预计实收</div>
-                    <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalNetRevenue, currency)}</div>
-                  </div>
+                  {!isMediaBuyer && (
+                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col justify-start min-h-[80px]">
+                      <div className="text-sm text-slate-500 mb-1 font-medium whitespace-nowrap">预计实收</div>
+                      <div className="text-lg sm:text-xl font-bold font-mono text-slate-800 mb-1 tabular-nums tracking-tight">{formatCurrency(totalNetRevenue, currency)}</div>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Type breakdown - Only visible to Admin */}
