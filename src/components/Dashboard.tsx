@@ -890,20 +890,20 @@ export default function Dashboard() {
                     <div className="text-xs text-slate-500 mb-1 font-medium whitespace-nowrap">客单价</div>
                     <div className="text-lg font-bold font-mono text-slate-800 mb-1 tabular-nums">{formatCurrency(realtimeDataScaled.arpu, currency)}</div>
                   </div>
-                  {/* 8. 新增付费人数 */}
+                  {/* 8. 首充人数 */}
                   <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 flex flex-col justify-start min-h-[100px]">
-                    <div className="text-xs text-slate-500 mb-1 font-medium whitespace-nowrap">{getPeriodPrefix(realtimePeriod)}新增付费人数</div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium whitespace-nowrap">{getPeriodPrefix(realtimePeriod)}首充人数</div>
                     <div className="text-lg font-bold font-mono text-slate-800 mb-1 tabular-nums">{realtimeDataScaled.newPayingUsers.toLocaleString()}</div>
                   </div>
-                  {/* 9. 新增付费金额 */}
+                  {/* 9. 首充金额 */}
                   <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 flex flex-col justify-start min-h-[100px]">
-                    <div className="text-xs text-slate-500 mb-1 font-medium whitespace-nowrap">{getPeriodPrefix(realtimePeriod)}新增付费金额</div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium whitespace-nowrap">{getPeriodPrefix(realtimePeriod)}首充金额</div>
                     <div className="text-lg font-bold font-mono text-slate-800 mb-1 tabular-nums">{formatCurrency(realtimeDataScaled.newPayingAmount, currency)}</div>
                     {renderTrend(realtimeDataScaled.newPayingAmountTrend, realtimePeriod)}
                   </div>
-                  {/* 10. 成交转化率 */}
+                  {/* 10. 支付成功率 */}
                   <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 flex flex-col justify-start min-h-[100px]">
-                    <div className="text-xs text-slate-500 mb-1 font-medium whitespace-nowrap">成交转化率</div>
+                    <div className="text-xs text-slate-500 mb-1 font-medium whitespace-nowrap">支付成功率</div>
                     <div className="text-lg font-bold font-mono text-slate-800 mb-1 tabular-nums">{realtimeDataScaled.conversionRate.toFixed(2)}%</div>
                   </div>
                 </div>
@@ -1658,7 +1658,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="font-bold text-slate-700 text-sm mb-1">核心指标</div>
-                    <div className="text-xs text-slate-500 leading-relaxed">包含总充值、预计实收、活跃人数、观看人数、意向人数、充值人数、客单价、新增付费等核心运营指标。</div>
+                    <div className="text-xs text-slate-500 leading-relaxed">包含总充值、预计实收、活跃人数、观看人数、意向人数、充值人数、客单价、首充人数等核心运营指标。</div>
                   </div>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="font-bold text-slate-700 text-sm mb-1">多维筛选</div>
@@ -1668,7 +1668,8 @@ export default function Dashboard() {
                     <div className="font-bold text-slate-700 text-sm mb-1">数据公式</div>
                     <div className="text-xs text-slate-500 leading-relaxed">
                       <p>• 预计实收 = 总充值 - 渠道佣金 - 税费</p>
-                      <p>• 成交转化率 = 充值人数 / 意向人数</p>
+                      <p>• 支付成功率 = 充值人数 / 意向人数</p>
+                      <p>• 环比 = (本期数值 - 上期数值) / 上期数值 * 100%</p>
                     </div>
                   </div>
                 </div>
