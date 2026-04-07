@@ -1491,25 +1491,6 @@ export default function Dashboard() {
               <Filter className="w-4 h-4" />
               <span>全局筛选:</span>
             </div>
-            
-            {/* Currency Filter */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500">币种:</span>
-              <div className="flex bg-slate-100 p-1 rounded-md border border-slate-200">
-                <button 
-                  onClick={() => setCurrency('USD')}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${currency === 'USD' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600 hover:text-slate-900'}`}
-                >
-                  USD ($)
-                </button>
-                <button 
-                  onClick={() => setCurrency('CNY')}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${currency === 'CNY' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-600 hover:text-slate-900'}`}
-                >
-                  CNY (¥)
-                </button>
-              </div>
-            </div>
 
             {/* Timezone Filter */}
             <div className="flex items-center gap-2 shrink-0">
@@ -1633,13 +1614,7 @@ export default function Dashboard() {
                   <div className="w-1.5 h-6 bg-slate-800 rounded-full"></div>
                   <h4 className="text-base font-bold text-slate-800 uppercase tracking-wide">全局说明 (Global Description)</h4>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="font-bold text-slate-700 text-sm mb-1">币种统计</div>
-                    <div className="text-xs text-slate-500 leading-relaxed">
-                      系统默认以 <span className="text-indigo-600 font-semibold">USD (美金)</span> 为基础币种进行统计。支持通过顶部切换开关实时按汇率转换为 <span className="text-indigo-600 font-semibold">CNY (人民币)</span> 展示。
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 gap-4">
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="font-bold text-slate-700 text-sm mb-1">时区筛选</div>
                     <div className="text-xs text-slate-500 leading-relaxed">
